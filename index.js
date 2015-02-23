@@ -15,6 +15,7 @@
 }(this, function() {
   "use strict";
 
+
 var ReactRenderVisualizer = {
         UPDATE_RENDER_LOG_POSITION_TIMEOUT_MS: 500,
         MAX_LOG_LENGTH: 20,
@@ -27,6 +28,25 @@ var ReactRenderVisualizer = {
         renderLogDetail: null,
         renderLogRenderCount: null,
         _updateRenderLogPositionTimeout: null,
+
+        styling: {
+            renderLog: {
+                color: '#ffffff',
+                backgroundColor: '#2f96b4',
+                position: 'absolute',
+                maxWidth: '70%',
+                padding: '5px 10px'
+            },
+            elementHighlightMonitor: {
+                outline: '1px solid rgba(47, 150, 180, 1)'
+            },
+            elementHighlightMount: {
+                outline: '3px solid rgba(55, 197, 7, 1)'
+            },
+            elementHighlightUpdate: {
+                outline: '3px solid rgba(197, 203, 1, 1)'
+            }
+        },
 
         componentDidMount: function(){
             // Reset the logs
@@ -42,7 +62,8 @@ var ReactRenderVisualizer = {
             this._highlightChange(this.STATE_CHANGES.MOUNT);
 
             // Set the watch to update log position
-            this._updateRenderLogPositionTimeout = setInterval(this._updateRenderLogPosition, this.UPDATE_RENDER_LOG_POSITION_TIMEOUT_MS);
+            this._updateRenderLogPositionTimeout = setInterval(
+                this._updateRenderLogPosition, this.UPDATE_RENDER_LOG_POSITION_TIMEOUT_MS);
         },
 
         componentDidUpdate: function(prevProps, prevState){
@@ -74,7 +95,8 @@ var ReactRenderVisualizer = {
         },
 
         /*
-         * Build the renderLog node, add it to the body and assign it's position based on the monitored component
+         * Build the renderLog node, add it to the body and assign it's position
+         * based on the monitored component
          * @return void
          */
         _buildRenderLogNode: function(){
@@ -84,14 +106,33 @@ var ReactRenderVisualizer = {
                 renderLogDetailNode = document.createElement("div");
 
             renderLogContainer.className = 'renderLog';
+
+            // Apply styling
+            Object.keys(this.styling.renderLog).forEach(function(className) {
+                renderLogContainer.style[className] = self.styling.renderLog[className];
+            });
+
+            // Attach the click handler for toggling the detail log
             renderLogContainer.addEventListener('click', function(){
-                self.renderLogContainer.classList.toggle('show');
+
+                // Show the detail Log
+                if(renderLogRenderCountNode.style.display === 'block') {
+                    renderLogRenderCountNode.style.display = 'none';
+                    renderLogDetailNode.style.display = 'block';
+                    renderLogContainer.style.zIndex = '100';
+
+                // Hide it
+                } else {
+                    renderLogRenderCountNode.style.display = 'block';
+                    renderLogDetailNode.style.display = 'none';
+                    renderLogContainer.style.zIndex = '0';
+                }
             });
 
             renderLogRenderCountNode.className = 'renderLogCounter';
             renderLogRenderCountNode.innerText = 1;
 
-            renderLogDetailNode.className = 'renderLogDetail';
+            renderLogDetailNode.style.display = 'none';
             renderLogDetailNode.innerText = '';
 
             renderLogContainer.appendChild(renderLogRenderCountNode);
@@ -116,7 +157,7 @@ var ReactRenderVisualizer = {
             var parentNode = this.getDOMNode(),
                 parentNodeRect = parentNode && parentNode.getBoundingClientRect();
 
-            if (this.renderLogContainer) {
+            if (this.renderLogContainer && parentNodeRect) {
                 this.renderLogContainer.style.top = (window.pageYOffset + parentNodeRect.top) + 'px';
                 this.renderLogContainer.style.left = parentNodeRect.left + 'px';
             }
@@ -172,7 +213,8 @@ var ReactRenderVisualizer = {
 
 
         /*
-         * Get the changes made to props or state.  In the event this component has its own shouldComponentUpdate, don't do
+         * Get the changes made to props or state.  In the event this component has its own
+         * shouldComponentUpdate, don't do
          * anything
          * @param object prevProps
          * @param object prevState
@@ -184,23 +226,30 @@ var ReactRenderVisualizer = {
                 key;
 
             // This component has custom logic, so we don't know why it did or did not update
-            if (this.shouldComponentUpdate) this.addToRenderLog(this.state, 'custom shouldComponentUpdate() handled update');
+            if (this.shouldComponentUpdate) {
+                this.addToRenderLog(this.state, 'custom shouldComponentUpdate() handled update');
+            }
 
             for (key in nextState){
                 if (nextState.hasOwnProperty(key) && nextState[key] !== prevState[key]){
-                    if (typeof nextState[key] === 'object')
+                    if (typeof nextState[key] === 'object') {
                         return this.addToRenderLog(this.state, 'this.state['+key+'] changed');
-                    else
-                        return this.addToRenderLog(this.state, 'this.state['+key+'] changed from ' + prevState[key] + ' => ' + nextState[key]);
+                    } else {
+                        return this.addToRenderLog(this.state,
+                            'this.state['+key+'] changed from ' + prevState[key] + ' => ' + nextState[key]);
+                    }
+
                 }
             }
 
             for (key in nextProps) {
                 if (nextProps.hasOwnProperty(key) && nextProps[key] !== prevProps[key]) {
-                    if (typeof nextProps[key] === 'object')
+                    if (typeof nextProps[key] === 'object') {
                         return this.addToRenderLog(this.state, 'this.props['+key+'] changed');
-                    else
-                        return this.addToRenderLog(this.state, 'this.props['+key+'] changed from ' + prevProps[key] + ' => ' + nextProps[key]);
+                    } else {
+                        return this.addToRenderLog(this.state,
+                            'this.props['+key+'] changed from ' + prevProps[key] + ' => ' + nextProps[key]);
+                    }
                 }
             }
 
@@ -213,16 +262,26 @@ var ReactRenderVisualizer = {
          * @return void
          */
         _highlightChange: function(change) {
-            var parentNode = this.getDOMNode();
+            var parentNode = this.getDOMNode(),
+                ANIMATION_DURATION = 500,
+                self = this;
 
             if (parentNode) {
-                parentNode.classList.remove('highlight-update','highlight-mount');
+                parentNode.style.boxSizing = 'border-box';
 
-                window.requestAnimationFrame(function(){
-                    parentNode.classList.add('highlight', 'highlight-' + change);
+                window.requestAnimationFrame(function highlightParentElementBorder(){
+                    // Immediately show the border
+                    parentNode.style.transition = 'outline 0s';
+                    if (change === self.STATE_CHANGES.MOUNT) {
+                        parentNode.style.outline = self.styling.elementHighlightMount.outline;
+                    } else {
+                        parentNode.style.outline = self.styling.elementHighlightUpdate.outline;
+                    }
 
-                    window.requestAnimationFrame(function(){
-                        parentNode.classList.remove('highlight-update','highlight-mount');
+                    // Animate the border back to monitored color
+                    window.requestAnimationFrame(function animateParentElementBorder() {
+                        parentNode.style.outline = self.styling.elementHighlightMonitor.outline;
+                        parentNode.style.transition = 'outline '+ANIMATION_DURATION+'ms linear';
                     });
                 });
             }
