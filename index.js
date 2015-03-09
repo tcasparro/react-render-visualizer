@@ -1,11 +1,11 @@
 ;(function (root, factory) {
   "use strict";
-  /*if (typeof define === "function" && define.amd) {
+  if (typeof define === "function" && define.amd) {
     // AMD
     define([], function() {
       return (root.ReactRenderVisualizer = factory());
     });
-  } else*/ if (typeof exports === "object") {
+  } else if (typeof exports === "object") {
     // CommonJS
     module.exports = factory();
   } else {
