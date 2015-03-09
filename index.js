@@ -31,17 +31,28 @@ var ReactRenderVisualizer = {
 
         styling: {
             renderLog: {
-                color: '#ffffff',
-                backgroundColor: '#2f96b4',
+                color: 'rgb(85, 85, 85)',
+                fontFamily: '\'Helvetica Neue\', Arial, Helvetica, sans-serif',
+                fontSize: '14px',
+                lineHeight: '18px',
+                background: 'linear-gradient(#fff, #ccc)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+                textShadow: '0 1px 0 #fff',
+                borderRadius: '7px',
                 position: 'absolute',
                 maxWidth: '70%',
-                padding: '5px 10px'
+                padding: '5px 10px',
+                zIndex: '10000'
+            },
+            renderLogDetailNotes: {
+                color: 'red',
+                textAlign: 'center'
             },
             elementHighlightMonitor: {
                 outline: '1px solid rgba(47, 150, 180, 1)'
             },
             elementHighlightMount: {
-                outline: '3px solid rgba(55, 197, 7, 1)'
+                outline: '3px solid rgba(197, 16, 12, 1)'
             },
             elementHighlightUpdate: {
                 outline: '3px solid rgba(197, 203, 1, 1)'
@@ -50,7 +61,7 @@ var ReactRenderVisualizer = {
 
         componentDidMount: function(){
             // Reset the logs
-            this._resetRenderLog();7
+            this._resetRenderLog();
 
             // Record initial mount
             this.addToRenderLog(this.state, 'Initial Render');
@@ -94,6 +105,12 @@ var ReactRenderVisualizer = {
             this.state.renderCount = 1;
         },
 
+        _applyCSSStyling: function(node, styles) {
+            Object.keys(styles).forEach(function(className) {
+                node.style[className] = styles[className];
+            });
+        },
+
         /*
          * Build the renderLog node, add it to the body and assign it's position
          * based on the monitored component
@@ -103,43 +120,53 @@ var ReactRenderVisualizer = {
             var self = this,
                 renderLogContainer = document.createElement('div'),
                 renderLogRenderCountNode = document.createElement("div"),
+                renderLogDetailContainer = document.createElement("div"),
+                renderLogNotesNode = document.createElement("div"),
                 renderLogDetailNode = document.createElement("div");
 
             renderLogContainer.className = 'renderLog';
 
             // Apply styling
-            Object.keys(this.styling.renderLog).forEach(function(className) {
-                renderLogContainer.style[className] = self.styling.renderLog[className];
-            });
+            this._applyCSSStyling(renderLogContainer, this.styling.renderLog)
 
             // Attach the click handler for toggling the detail log
             renderLogContainer.addEventListener('click', function(){
 
                 // Show the detail Log
-                if(renderLogRenderCountNode.style.display === 'block') {
-                    renderLogRenderCountNode.style.display = 'none';
-                    renderLogDetailNode.style.display = 'block';
-                    renderLogContainer.style.zIndex = '100';
+                if(renderLogRenderCountNode.style.display === 'none') {
+                    renderLogRenderCountNode.style.display = 'block';
+                    renderLogDetailContainer.style.display = 'none';
+                    renderLogContainer.style.zIndex = '10000';
 
                 // Hide it
                 } else {
-                    renderLogRenderCountNode.style.display = 'block';
-                    renderLogDetailNode.style.display = 'none';
-                    renderLogContainer.style.zIndex = '0';
+                    renderLogRenderCountNode.style.display = 'none';
+                    renderLogDetailContainer.style.display = 'block';
+                    renderLogContainer.style.zIndex = '10001';
                 }
             });
 
             renderLogRenderCountNode.className = 'renderLogCounter';
             renderLogRenderCountNode.innerText = 1;
 
-            renderLogDetailNode.style.display = 'none';
+            renderLogDetailContainer.style.display = 'none';
             renderLogDetailNode.innerText = '';
 
+            if (this.shouldComponentUpdate) {
+                renderLogNotesNode.innerText = 'NOTE: This component uses a custom shouldComponentUpdate(), so the results above are purely informational';
+            }
+
+            this._applyCSSStyling(renderLogNotesNode, this.styling.renderLogDetailNotes);
+
+            renderLogDetailContainer.appendChild(renderLogDetailNode);
+            renderLogDetailContainer.appendChild(renderLogNotesNode);
+
             renderLogContainer.appendChild(renderLogRenderCountNode);
-            renderLogContainer.appendChild(renderLogDetailNode);
+            renderLogContainer.appendChild(renderLogDetailContainer);
 
             this.renderLogContainer = renderLogContainer;
             this.renderLogDetail = renderLogDetailNode;
+            this.renderLogNotes = renderLogNotesNode;
             this.renderLogRenderCount = renderLogRenderCountNode;
 
             // Append to the body
@@ -147,6 +174,10 @@ var ReactRenderVisualizer = {
 
             // Set initial position
             this._updateRenderLogPosition();
+
+            //
+            this._updateRenderLogNode();
+
         },
 
         /*
@@ -159,7 +190,7 @@ var ReactRenderVisualizer = {
 
             if (this.renderLogContainer && parentNodeRect) {
                 this.renderLogContainer.style.top = (window.pageYOffset + parentNodeRect.top) + 'px';
-                this.renderLogContainer.style.left = parentNodeRect.left + 'px';
+                this.renderLogContainer.style.left = (parentNodeRect.left) + 'px';
             }
         },
 
@@ -225,18 +256,13 @@ var ReactRenderVisualizer = {
                 nextProps = this.props,
                 key;
 
-            // This component has custom logic, so we don't know why it did or did not update
-            if (this.shouldComponentUpdate) {
-                this.addToRenderLog(this.state, 'custom shouldComponentUpdate() handled update');
-            }
-
             for (key in nextState){
                 if (nextState.hasOwnProperty(key) && nextState[key] !== prevState[key]){
                     if (typeof nextState[key] === 'object') {
                         return this.addToRenderLog(this.state, 'this.state['+key+'] changed');
                     } else {
                         return this.addToRenderLog(this.state,
-                            'this.state['+key+'] changed from ' + prevState[key] + ' => ' + nextState[key]);
+                            'this.state['+key+'] changed: \'' + prevState[key] + '\' => \'' + nextState[key] + '\'');
                     }
 
                 }
@@ -248,7 +274,7 @@ var ReactRenderVisualizer = {
                         return this.addToRenderLog(this.state, 'this.props['+key+'] changed');
                     } else {
                         return this.addToRenderLog(this.state,
-                            'this.props['+key+'] changed from ' + prevProps[key] + ' => ' + nextProps[key]);
+                            'this.props['+key+'] changed: \'' + prevProps[key] + '\' => \'' + nextProps[key] + '\'');
                     }
                 }
             }
