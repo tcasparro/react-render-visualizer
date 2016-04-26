@@ -58,6 +58,10 @@ var ReactRenderVisualizer = {
                 outline: '3px solid rgba(197, 203, 1, 1)'
             }
         },
+        
+        getInitialState: function(){
+            return { renderLog: [], renderCount: 1 };
+        },
 
         componentDidMount: function(){
             // Reset the logs
@@ -127,7 +131,7 @@ var ReactRenderVisualizer = {
             renderLogContainer.className = 'renderLog';
 
             // Apply styling
-            this._applyCSSStyling(renderLogContainer, this.styling.renderLog)
+            this._applyCSSStyling(renderLogContainer, this.styling.renderLog);
 
             // Attach the click handler for toggling the detail log
             renderLogContainer.addEventListener('click', function(){
