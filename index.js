@@ -2,17 +2,17 @@
   "use strict";
   if (typeof define === "function" && define.amd) {
     // AMD
-    define([], function() {
-      return (root.ReactRenderVisualizer = factory());
+    define(['react'], function(React) {
+      return (root.ReactRenderVisualizer = factory(React));
     });
   } else if (typeof exports === "object") {
     // CommonJS
-    module.exports = factory();
+    module.exports = factory(React);
   } else {
     // Global variables
-    root.ReactRenderVisualizer = factory();
+    root.ReactRenderVisualizer = factory(React);
   }
-}(this, function() {
+}(this, function(React) {
   "use strict";
 
 
@@ -78,7 +78,7 @@ var ReactRenderVisualizer = {
 
             // Set the watch to update log position
             this._updateRenderLogPositionTimeout = setInterval(
-                this._updateRenderLogPosition, this.UPDATE_RENDER_LOG_POSITION_TIMEOUT_MS);
+                this._updateRenderLogPosition.bind(this), this.UPDATE_RENDER_LOG_POSITION_TIMEOUT_MS);
         },
 
         componentDidUpdate: function(prevProps, prevState){
@@ -105,6 +105,9 @@ var ReactRenderVisualizer = {
          * @return void
          */
         _resetRenderLog: function(){
+            if (!this.state) {
+              this.state = {};
+            }
             this.state.renderLog = [];
             this.state.renderCount = 1;
         },
@@ -189,7 +192,7 @@ var ReactRenderVisualizer = {
          * @return void
          */
         _updateRenderLogPosition: function(){
-            var parentNode = this.getDOMNode(),
+            var parentNode = React.findDOMNode(this),
                 parentNodeRect = parentNode && parentNode.getBoundingClientRect();
 
             if (this.renderLogContainer && parentNodeRect) {
@@ -219,7 +222,6 @@ var ReactRenderVisualizer = {
 
                 this.renderLogDetail.appendChild(logFragment);
             }
-            //this.state.renderCount++;
         },
 
         /*
@@ -292,7 +294,7 @@ var ReactRenderVisualizer = {
          * @return void
          */
         _highlightChange: function(change) {
-            var parentNode = this.getDOMNode(),
+            var parentNode = React.findDOMNode(this),
                 ANIMATION_DURATION = 500,
                 self = this;
 
